@@ -1,0 +1,146 @@
+# config.yaml - Configuration for scene completion training
+
+# ============================================================================
+# DATA CONFIGURATION
+# ============================================================================
+data:
+  type: video  # 'synthetic', 'video', 'realsense'
+  data_dir: ./data/videos
+  num_frames: 10
+  img_size: 224
+  voxel_resolution: 64
+  use_depth: false
+  use_augmentation: true
+
+# ============================================================================
+# MODEL CONFIGURATION
+# ============================================================================
+model:
+  type: lightweight  # 'lightweight' or 'full'
+  
+  # Lightweight model settings
+  lightweight:
+    voxel_resolution: 64
+  
+  # Full transformer settings
+  full:
+    img_size: 224
+    patch_size: 16
+    voxel_resolution: 64
+    embed_dim: 512
+    encoder_depth: 8
+    decoder_depth: 4
+    num_heads: 8
+
+# ============================================================================
+# TRAINING CONFIGURATION
+# ============================================================================
+training:
+  epochs: 100
+  batch_size: 4
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  
+  # Learning rate schedule
+  lr_schedule:
+    type: cosine  # 'cosine', 'step', 'plateau'
+    warmup_epochs: 5
+  
+  # Optimization
+  optimizer: adamw  # 'adam', 'adamw', 'sgd'
+  gradient_clip: 1.0
+  
+  # Mixed precision
+  use_amp: true
+
+# ============================================================================
+# LOSS CONFIGURATION
+# ============================================================================
+loss:
+  occupancy_weight: 1.0
+  sdf_weight: 0.5
+  smoothness_weight: 0.01
+  consistency_weight: 0.5
+
+# ============================================================================
+# VALIDATION & LOGGING
+# ============================================================================
+validation:
+  val_freq: 1  # Validate every N epochs
+  save_freq: 10  # Save checkpoint every N epochs
+  num_vis_samples: 4  # Number of samples to visualize
+
+logging:
+  use_wandb: false
+  wandb_project: scene-completion
+  wandb_entity: null
+  log_dir: ./logs
+  save_predictions: true
+
+# ============================================================================
+# HARDWARE CONFIGURATION
+# ============================================================================
+hardware:
+  device: cuda
+  num_workers: 4
+  pin_memory: true
+  distributed: false
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+output:
+  output_dir: ./outputs
+  checkpoint_dir: ./checkpoints
+  results_dir: ./results
+  
+  # What to save
+  save_model: true
+  save_optimizer: true
+  save_scheduler: true
+  
+  # Mesh export settings
+  mesh:
+    voxel_size: 0.05
+    threshold: 0.5
+    export_format: ply
+
+# ============================================================================
+# QUICK PRESETS
+# ============================================================================
+
+# Uncomment one of these presets for quick configuration
+
+# FAST TESTING (low quality, fast training)
+# data:
+#   voxel_resolution: 32
+#   num_frames: 5
+# model:
+#   type: lightweight
+# training:
+#   batch_size: 8
+#   epochs: 20
+
+# BALANCED (good quality, reasonable time)
+# data:
+#   voxel_resolution: 64
+#   num_frames: 10
+# model:
+#   type: lightweight
+# training:
+#   batch_size: 4
+#   epochs: 100
+
+# HIGH QUALITY (best results, slow training)
+# data:
+#   voxel_resolution: 128
+#   num_frames: 20
+# model:
+#   type: full
+#   full:
+#     embed_dim: 768
+#     encoder_depth: 12
+#     decoder_depth: 6
+# training:
+#   batch_size: 2
+#   epochs: 200
