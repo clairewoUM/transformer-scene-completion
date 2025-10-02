@@ -95,7 +95,7 @@ class SceneCompletionTrainer:
         
         Components:
         1. Occupancy loss (BCE)
-        2. SDF loss (L1)
+        # 2. SDF loss (L1)
         3. Smoothness regularization
         """
         losses = {}
@@ -105,10 +105,16 @@ class SceneCompletionTrainer:
             losses['occupancy'] = nn.functional.binary_cross_entropy(
                 pred_occupancy, gt_occupancy
             )
-        
-        if 'gt_sdf' in batch:
-            gt_sdf = batch['gt_sdf'].to(self.device)
-            losses['sdf'] = nn.functional.l1_loss(pred_sdf, gt_sdf)
+
+        elif 'depth' in batch:
+            pseudo_gt = self.depth_to_voxel_supervision(batch['depth'])
+            losses['occupancy'] = nn.functional.binary_cross_entropy(
+                pred_occupancy, pseudo_gt
+            )
+            
+        # if 'gt_sdf' in batch:
+        #     gt_sdf = batch['gt_sdf'].to(self.device)
+        #     losses['sdf'] = nn.functional.l1_loss(pred_sdf, gt_sdf)
         
         # Smoothness loss (total variation)
         tv_loss = self.total_variation_loss(pred_occupancy)
@@ -118,13 +124,37 @@ class SceneCompletionTrainer:
         total_loss = 0
         if 'occupancy' in losses:
             total_loss += losses['occupancy']
-        if 'sdf' in losses:
-            total_loss += 0.5 * losses['sdf']
+        # if 'sdf' in losses:
+        #     total_loss += 0.5 * losses['sdf']
         total_loss += 0.01 * losses['smoothness']
         
         losses['total'] = total_loss
         
         return losses
+
+    def depth_to_voxel_supervision(self, depth_maps):
+        """Convert depth to pseudo ground truth voxels"""
+        B, T, _, H, W = depth_maps.shape
+        R = self.config['voxel_resolution']
+        
+        voxels = torch.zeros(B, R, R, R, device=depth_maps.device)
+        
+        for t in range(T):
+            depth = depth_maps[:, t, 0]
+            depth_down = nn.functional.interpolate(
+                depth.unsqueeze(1), 
+                size=(R, R), 
+                mode='bilinear'
+            ).squeeze(1)
+            
+            for i in range(R):
+                for j in range(R):
+                    d = depth_down[:, i, j]
+                    z_idx = (d * R / 5.0).long().clamp(0, R-1)
+                    voxels[:, i, j, z_idx] = 1
+
+        return voxels
+    
     
     @staticmethod
     def total_variation_loss(x):

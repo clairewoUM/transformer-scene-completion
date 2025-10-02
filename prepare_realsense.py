@@ -2,7 +2,8 @@
 prepare_realsense.py - Prepare RealSense D455 data for training
 
 This script converts your RealSense frame sequences into videos
-and prepares them for the scene completion model.
+and prepares them for the scene completion model.file:///home/dudl3443/transformer-scene/train.py
+
 
 Usage:
     python prepare_realsense.py --input colorFrames --output data/videos
@@ -14,7 +15,12 @@ from pathlib import Path
 import argparse
 from tqdm import tqdm
 import json
+import re  
 
+def natural_sort_key(s):
+    """Sort numbers correctly: 1, 2, 3... 10, 11 not 1, 10, 11... 2"""
+    return [int(text) if text.isdigit() else text.lower() 
+            for text in re.split('([0-9]+)', str(s))]
 
 class RealSenseDataPreparator:
     """Prepare RealSense data for scene completion training"""
@@ -23,6 +29,7 @@ class RealSenseDataPreparator:
         self.fps = fps
         self.output_resolution = output_resolution
     
+
     def frames_to_video(self, frames_dir, output_video, skip_frames=0):
         """
         Convert frame sequence to video
@@ -35,7 +42,7 @@ class RealSenseDataPreparator:
         frames_dir = Path(frames_dir)
         
         # Find all frames
-        frames = sorted(frames_dir.glob('frame_*.png'))
+        frames = sorted(frames_dir.glob('frame_*.png'), key=natural_sort_key)
         
         if not frames:
             print(f"No frames found in {frames_dir}")
@@ -98,7 +105,7 @@ class RealSenseDataPreparator:
         depth_dir = Path(depth_dir)
         
         # Find all depth frames
-        frames = sorted(depth_dir.glob('frame_*.png'))
+        frames = sorted(depth_dir.glob('frame_*.png'), key=natural_sort_key)
         frames = frames[skip_frames:]
         
         if not frames:
